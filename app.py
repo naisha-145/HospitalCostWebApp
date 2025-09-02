@@ -1,37 +1,36 @@
 import streamlit as st
-import joblib
 import pandas as pd
-import openai  # Blackbox AI-compatible
+import joblib
+import openai
 
-# ----------------- STREAMLIT PAGE SETTINGS -----------------
-st.set_page_config(page_title="Hospital AI Assistant", layout="wide")
+# ==========================
+# Load your ML model
+# ==========================
+model = joblib.load("hospital_cost_model.pkl")
 
-st.markdown("<h1 style='text-align: center; color: #4CAF50;'>🏥 Hospital AI Assistant 🏥</h1>", unsafe_allow_html=True)
+# ==========================
+# OpenAI API Key
+# ==========================
+# Go to https://platform.openai.com/account/api-keys and create a key
+OPENAI_API_KEY = "YOUR_OPENAI_API_KEY"  
+openai.api_key = OPENAI_API_KEY
 
-# ----------------- LOAD ML MODEL -----------------
-@st.cache_resource
-def load_model():
-    return joblib.load("hospital_cost_model.pkl")
+# ==========================
+# Streamlit UI
+# ==========================
+st.set_page_config(page_title="Hospital Cost Predictor & Chatbot", layout="wide")
+st.title("🏥 Hospital Cost Predictor & AI Chatbot")
 
-model = load_model()
-
-# ----------------- RAG CHATBOT -----------------
-openai.api_key = "sk-zV46P0zFQ9AYqna2JfYzog"  # Replace with your Blackbox AI API key
-
-def generate_answer(question):
-    response = openai.ChatCompletion.create(
-        model="gpt-4",
-        messages=[{"role": "user", "content": question}]
-    )
-    return response['choices'][0]['message']['content']
-
-# ----------------- TWO COLUMN LAYOUT -----------------
+# Split page into two columns
 col1, col2 = st.columns(2)
 
-# ----------------- COLUMN 1: HOSPITAL COST PREDICTOR -----------------
+# ==========================
+# Column 1: Hospital Cost Predictor
+# ==========================
 with col1:
     st.header("Predict Hospital Cost")
-
+    
+    # Collect patient info
     age = st.number_input("Age", min_value=0, max_value=120, value=30)
     gender = st.selectbox("Gender", ["Male", "Female"])
     bmi = st.number_input("BMI", min_value=10.0, max_value=60.0, value=25.0)
@@ -41,7 +40,8 @@ with col1:
     proc_blood_test = st.checkbox("Procedure: Blood Test")
     com_diabetes = st.checkbox("Comorbidity: Diabetes")
     com_hypertension = st.checkbox("Comorbidity: Hypertension")
-
+    
+    # Prepare input
     input_dict = {
         "age": age,
         "gender": gender,
@@ -53,9 +53,8 @@ with col1:
         "com_diabetes": int(com_diabetes),
         "com_hypertension": int(com_hypertension)
     }
-
     input_df = pd.DataFrame([input_dict])
-
+    
     if st.button("Predict Cost"):
         try:
             pred = float(model.predict(input_df)[0])
@@ -63,20 +62,40 @@ with col1:
         except Exception as e:
             st.error(f"Prediction error: {e}")
 
-# ----------------- COLUMN 2: AI CHATBOT -----------------
+# ==========================
+# Column 2: RAG-style AI Chatbot
+# ==========================
 with col2:
-    st.header("Ask the AI Chatbot")
+    st.header("Ask about hospital or health topics")
+    
     if 'chat_history' not in st.session_state:
         st.session_state['chat_history'] = []
 
-    user_input = st.text_input("Ask anything about hospital procedures or health:")
+    user_input = st.text_input("You:", key="input")
 
     if st.button("Send") and user_input.strip() != "":
         with st.spinner("Generating answer..."):
-            answer = generate_answer(user_input)
-            st.session_state.chat_history.append({"user": user_input, "bot": answer})
+            # Call OpenAI GPT
+            try:
+                response = openai.ChatCompletion.create(
+                    model="gpt-3.5-turbo",
+                    messages=[
+                        {"role": "system", "content": "You are a helpful hospital assistant."},
+                        *[
+                            {"role": "user", "content": chat['user']}
+                            for chat in st.session_state['chat_history']
+                        ],
+                        {"role": "user", "content": user_input}
+                    ],
+                    max_tokens=250
+                )
+                answer = response['choices'][0]['message']['content']
+                st.session_state.chat_history.append({"user": user_input, "bot": answer})
+            except Exception as e:
+                st.error(f"Chatbot error: {e}")
 
     # Display chat history
     for chat in st.session_state.chat_history:
         st.markdown(f"**You:** {chat['user']}")
         st.markdown(f"**Bot:** {chat['bot']}")
+
