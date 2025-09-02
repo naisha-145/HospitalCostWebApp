@@ -12,7 +12,7 @@ model = joblib.load("hospital_cost_model.pkl")
 # OpenAI API Key
 # ==========================
 # Go to https://platform.openai.com/account/api-keys and create a key
-OPENAI_API_KEY = "YOUR_OPENAI_API_KEY"  
+OPENAI_API_KEY = "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"  
 openai.api_key = OPENAI_API_KEY
 
 # ==========================
@@ -98,4 +98,3 @@ with col2:
     for chat in st.session_state.chat_history:
         st.markdown(f"**You:** {chat['user']}")
         st.markdown(f"**Bot:** {chat['bot']}")
-
