@@ -1,10 +1,9 @@
-streamlit==1.22.0
-pandas==2.0.3
-numpy==2.0.2
-scikit-learn==1.6.1
+streamlit==1.49.1
+pandas==2.1.1
+numpy==2.0.2      # Replace with the version from Colab output
+scikit-learn==1.2.2
 joblib==1.3.2
 openai==1.31.0
-
 
 
 
